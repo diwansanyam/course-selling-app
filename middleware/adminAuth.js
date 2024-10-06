@@ -4,6 +4,7 @@ function adminAuth(req,res,next){
     const token = req.headers.token;
     const verifiedToken = jwt.verify(token, process.env.JWT_SECRET_USER);
     if(verifiedToken){
+        req.adminId=verifiedToken.id;
         next();
     }
     else{
