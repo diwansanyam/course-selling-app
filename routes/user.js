@@ -1,8 +1,11 @@
+require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const {Router} = require("express");
 const userRouter = Router();
 const { userAuth } = require("../middleware/userAuth");
 const {z}= require("zod");
 const { UserModel } = require("../db");
+const bcrypt = require('bcrypt');
 const signupSchema = z.object({
   email: z.string().email("invalid email address"),
   password: z.string().min(5, "password must be greater thn 6 chars"),
@@ -12,7 +15,10 @@ const signupSchema = z.object({
 userRouter.post("/signup", async (req, res) => {
   try {
     const validatedSignupSchema = signupSchema.parse(req.body);
-    const newUser = await UserModel.create(validatedSignupSchema);
+    const saltRounds=10;
+    const hashedPwd= await bcrypt.hash(validatedSignupSchema.password,saltRounds);
+    const userDetails = {...validatedSignupSchema,password:hashedPwd}
+    const newUser = await UserModel.create(userDetails);
     res.status(200).json({
       message:"signup successfull",
       user:newUser
@@ -34,11 +40,32 @@ userRouter.post("/signup", async (req, res) => {
   }
 });
 
-userRouter.get("/login", userAuth, (req, res) => {
-  res.send("Hello World!");
-});
-
-userRouter.get("/purchases", (req, res) => {
+userRouter.get("/login",  async (req, res) => {
+  const username = req.body.email;
+  const password = req.body.password;
+  const user = await UserModel.findOne({email:username});
+  if(!user){
+    res.status(400).json({
+      message:"user not found"
+    })
+  }else{
+    const passwordMatch = await bcrypt.compare(password,user.password);
+    if(passwordMatch){
+      const token =jwt.sign({id:user._id},process.env.JWT_SECRET_USER)
+      req.token=token;
+      res.status(200).json({
+        message:"Logged in successfully",
+        token
+      })
+    }
+    else{
+      res.status(400).json({
+        message:"incoorect password"
+      })
+    }
+  }
+}); 
+userRouter.get("/purchases",userAuth, (req, res) => {
   res.send("Hello World!");
 });
 
