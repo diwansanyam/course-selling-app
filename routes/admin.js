@@ -6,7 +6,7 @@ const {z} = require("zod");
 const { adminAuth } = require("../middleware/adminAuth");
 const jwt = require("jsonwebtoken");
 
-const { AdminModel } = require("../db");
+const { AdminModel, CourseModel } = require("../db");
 const signupSchema = z.object({
   email: z.string().email("invalid email address"),
   password: z.string().min(5, "password must be greater thn 6 chars"),
@@ -64,14 +64,56 @@ adminRouter.get("/login",async (req,res)=>{
     }
   }
 })
-adminRouter.post("/course",(req,res)=>{
-    res.send("create course")
+adminRouter.post("/course",adminAuth,async(req,res)=>{
+    const { title, description, price, imageUrl } = req.body;
+    const creatorId = req.adminId;
+    const courseCreated = await CourseModel.create({title,description,price,imageUrl,creatorId});
+    if(courseCreated){
+      res.json({
+        message:"course created successfully",
+        course:courseCreated
+      })
+    }
+    else{
+      res.status(400).json({
+        message:"course not creted"
+      })
+    }
 })
-adminRouter.put("/course",(req,res)=>{
+adminRouter.put("/course",adminAuth,async(req,res)=>{
+  const creatorId = req.body.creatorId;
+  const adminId = req.adminId;
+  const courseId = req.body.courseId;
+  if(creatorId==adminId){
+    const {title,description,price,imageUrl}=req.body;
+    const updatedCourse = await CourseModel.findByIdAndUpdate(courseId,{title,description,price,imageUrl},{ new: true });
+    if(updatedCourse){
+      console.log(updatedCourse);
+      res.json({
+        message:"course updated"
+      })
+    }
+    else{
+      res.status(400).json({
+        message:"course updation failed"
+      })
+    }
+  }
     res.send("changing the course")
 })
-adminRouter.get("/course/bulk",(req,res)=>{
-    res.send("get all courses")
+adminRouter.get("/course/bulk",adminAuth,async(req,res)=>{
+    const courses = await CourseModel.find({creatorId:req.adminId});
+    if(courses){
+      res.json({
+        message:"courses found",
+        courses
+      })
+    }
+    else{
+      res.json({ message: "not found" });
+     
+    }
+    console.log(courses);
 })
 module.exports={
     adminRouter:adminRouter

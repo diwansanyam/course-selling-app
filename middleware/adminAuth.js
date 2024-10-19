@@ -2,9 +2,12 @@ require("dotenv").config;
 const jwt = require("jsonwebtoken");
 function adminAuth(req,res,next){
     const token = req.headers.token;
-    const verifiedToken = jwt.verify(token, process.env.JWT_SECRET_USER);
+    console.log("token found");
+    const verifiedToken = jwt.verify(token, process.env.JWT_SECRET_ADMIN);
     if(verifiedToken){
+        
         req.adminId=verifiedToken.id;
+        console.log(req);
         next();
     }
     else{

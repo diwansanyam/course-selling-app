@@ -4,7 +4,7 @@ const {Router} = require("express");
 const userRouter = Router();
 const { userAuth } = require("../middleware/userAuth");
 const {z}= require("zod");
-const { UserModel } = require("../db");
+const { UserModel, PurchaseModel, CourseModel } = require("../db");
 const bcrypt = require('bcrypt');
 const signupSchema = z.object({
   email: z.string().email("invalid email address"),
@@ -65,8 +65,17 @@ userRouter.get("/login",  async (req, res) => {
     }
   }
 }); 
-userRouter.get("/purchases",userAuth, (req, res) => {
-  res.send("Hello World!");
+userRouter.get("/purchases",userAuth, async (req, res) => {
+  const userId = req.userId;
+  const purchasedCourses =await PurchaseModel.find({userId});
+  const coursesData = await CourseModel.find(
+   { _id: {$in : purchasedCourses.map(x=>x.courseId)}}
+  )
+  res.json({
+    purchasedCourses,
+    coursesData
+  })
+
 });
 
 
